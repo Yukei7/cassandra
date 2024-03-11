@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.db.guardrails;
 
+import java.lang.reflect.Field;
 import java.util.Collections;
 import java.util.Set;
 import java.util.function.Function;
@@ -149,6 +150,22 @@ public final class Guardrails implements GuardrailsMBean
     new DisableFlag("drop_truncate_table_enabled",
                     state -> !CONFIG_PROVIDER.getOrCreate(state).getDropTruncateTableEnabled(),
                     "DROP and TRUNCATE TABLE functionality");
+
+    /**
+     * Guardrail disabling DDL statements
+     */
+    public static final DisableFlag ddlEnabled =
+    new DisableFlag("ddl_enabled",
+                    state -> !CONFIG_PROVIDER.getOrCreate(state).getDDLEnabled(),
+                    "DDL statement");
+
+    /**
+     * Guardrail disabling DCL statements
+     */
+    public static final DisableFlag dclEnabled =
+    new DisableFlag("dcl_enabled",
+                    state -> !CONFIG_PROVIDER.getOrCreate(state).getDCLEnabled(),
+                    "DCL statement");
 
     /**
      * Guardrail disabling user's ability to turn off compression
@@ -600,6 +617,45 @@ public final class Guardrails implements GuardrailsMBean
     }
 
     @Override
+<<<<<<< HEAD
+=======
+    public boolean getBulkLoadEnabled()
+    {
+        return DEFAULT_CONFIG.getBulkLoadEnabled();
+    }
+
+    @Override
+    public void setBulkLoadEnabled(boolean enabled)
+    {
+        DEFAULT_CONFIG.setBulkLoadEnabled(enabled);
+    }
+
+    @Override
+    public boolean getDDLEnabled()
+    {
+        return DEFAULT_CONFIG.getDDLEnabled();
+    }
+
+    @Override
+    public void setDDLEnabled(boolean enabled)
+    {
+        DEFAULT_CONFIG.setDDLEnabled(enabled);
+    }
+
+    @Override
+    public boolean getDCLEnabled()
+    {
+        return DEFAULT_CONFIG.getDCLEnabled();
+    }
+
+    @Override
+    public void setDCLEnabled(boolean enabled)
+    {
+        DEFAULT_CONFIG.setDCLEnabled(enabled);
+    }
+
+    @Override
+>>>>>>> 33ca0adba8 ((C4.1) disable ddl/dcl under guardrail framework)
     public int getPageSizeWarnThreshold()
     {
         return DEFAULT_CONFIG.getPageSizeWarnThreshold();
