@@ -30,8 +30,7 @@ import org.apache.cassandra.cql3.statements.AuthorizationStatement;
 import org.apache.cassandra.service.QueryState;
 
 import static java.lang.String.format;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -155,7 +154,8 @@ public class GuardrailDCLEnabledTest extends GuardrailTester
     }
 
     @Test
-    public void testMockDCLStatementsWhileFeaturesDisabled() {
+    public void testMockDCLStatementsWhileFeaturesDisabled()
+    {
         AuthorizationStatement authorizationStatement = mock(AuthorizationStatement.class);
         AuthenticationStatement authenticationStatement = mock(AuthenticationStatement.class);
         QueryState queryState = mock(QueryState.class);
@@ -166,20 +166,15 @@ public class GuardrailDCLEnabledTest extends GuardrailTester
         QueryProcessor qp = QueryProcessor.instance;
 
         setGuardrail(false);
-        try {
-            qp.processStatement(authorizationStatement, queryState, QueryOptions.DEFAULT, 0L);
-            fail("expecting GuardrailViolatedException");
-        } catch (GuardrailViolatedException e) {
-            // expceted
-        }
+
+        assertThatThrownBy(() -> qp.processStatement(authorizationStatement, queryState, QueryOptions.DEFAULT, 0L))
+        .isInstanceOf(GuardrailViolatedException.class);
+
         verify(authorizationStatement).isDCLStatement();
 
-        try {
-            qp.processStatement(authenticationStatement, queryState, QueryOptions.DEFAULT, 0L);
-            fail("expecting GuardrailViolatedException");
-        } catch (GuardrailViolatedException e) {
-            // expceted
-        }
+        assertThatThrownBy(() -> qp.processStatement(authenticationStatement, queryState, QueryOptions.DEFAULT, 0L))
+        .isInstanceOf(GuardrailViolatedException.class);
+
         verify(authenticationStatement).isDCLStatement();
 
         setGuardrail(true);
@@ -189,15 +184,9 @@ public class GuardrailDCLEnabledTest extends GuardrailTester
 
     private void shouldFailWithDCLErrorMsg(String query)
     {
-        try
-        {
-            executeNet(query);
-            fail("expecting InvalidQueryException");
-        }
-        catch (InvalidQueryException e)
-        {
-            assertTrue(e.getMessage().contains(DCL_ERROR_MSG));
-        }
+        assertThatThrownBy(() -> executeNet(query))
+        .isInstanceOf(InvalidQueryException.class)
+        .hasMessageContaining(DCL_ERROR_MSG);
     }
 
     private static String getCreateRoleCQL(String role)
