@@ -158,15 +158,6 @@ public final class Guardrails implements GuardrailsMBean
                    "GROUP BY functionality");
 
     /**
-     * Guardrail disabling ALTER TABLE column mutation access.
-     */
-    public static final EnableFlag alterTableEnabled =
-    new EnableFlag("alter_table",
-                   null,
-                   state -> CONFIG_PROVIDER.getOrCreate(state).getAlterTableEnabled(),
-                   "User access to ALTER TABLE statement for column mutation");
-
-    /**
      * Guardrail disabling DROP / TRUNCATE TABLE behavior
      */
     public static final EnableFlag dropTruncateTableEnabled =
@@ -774,18 +765,6 @@ public final class Guardrails implements GuardrailsMBean
     public void setUserTimestampsEnabled(boolean enabled)
     {
         DEFAULT_CONFIG.setUserTimestampsEnabled(enabled);
-    }
-
-    @Override
-    public boolean getAlterTableEnabled()
-    {
-        return DEFAULT_CONFIG.getAlterTableEnabled();
-    }
-
-    @Override
-    public void setAlterTableEnabled(boolean enabled)
-    {
-        DEFAULT_CONFIG.setAlterTableEnabled(enabled);
     }
 
     @Override

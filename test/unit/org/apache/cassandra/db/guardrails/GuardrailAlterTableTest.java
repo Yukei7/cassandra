@@ -22,19 +22,20 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-
 /**
- * Tests the guardrail for disabling user access to the ALTER TABLE statement, {@link Guardrails#alterTableEnabled}.
- *
+ * Tests the guardrail for disabling user access to the ALTER TABLE statement, {@link Guardrails#ddlEnabled}.
+ * <p>
  * NOTE: This test class depends on {@link #currentTable()} method for setup, cleanup, and execution of tests. You'll
  * need to refactor this if you add tests that make changes to the current table as the test teardown will no longer match
  * setup.
+ * <p>
+ * This test is a leftover from CASSANDRA-17495 which was accommodated for the purposes of CASSANDRA-19556.
  */
 public class GuardrailAlterTableTest extends GuardrailTester
 {
     public GuardrailAlterTableTest()
     {
-        super(Guardrails.alterTableEnabled);
+        super(Guardrails.ddlEnabled);
     }
 
     @Before
@@ -52,7 +53,7 @@ public class GuardrailAlterTableTest extends GuardrailTester
 
     private void setGuardrail(boolean alterTableEnabled)
     {
-        guardrails().setAlterTableEnabled(alterTableEnabled);
+        guardrails().setDDLEnabled(alterTableEnabled);
     }
 
     /**
