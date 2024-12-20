@@ -1,4 +1,5 @@
 4.1.8
+ * IndexSummaryRedistribution should unmark compacting SSTables in batch (CASSANDRA-20159)
  * Add nodetool checktokenmetadata command that checks TokenMetadata is insync with Gossip endpointState (CASSANDRA-18758)
  * Backport Java 11 support for Simulator (CASSANDRA-17178/CASSANDRA-19935)
  * Equality check for Paxos.Electorate should not depend on collection types (CASSANDRA-19935)
