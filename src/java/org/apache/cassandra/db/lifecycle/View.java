@@ -22,6 +22,7 @@ import java.util.*;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.base.Objects;
 import com.google.common.base.Predicate;
 import com.google.common.collect.*;
 
@@ -283,6 +284,13 @@ public class View
             public View apply(View view)
             {
                 Map<SSTableReader, SSTableReader> sstableMap = replace(view.sstablesMap, remove, add);
+                if (isRangesUnchanged(remove, add))
+                {
+                    // If the SSTable before and after has the same key range, then there is no need to rebuild the interval tree.
+                    // Instead, we find and update the node
+                    return new View(view.liveMemtables, view.flushingMemtables, sstableMap, view.compactingMap,
+                                    SSTableIntervalTree.replaceSSTables(view.intervalTree, add));
+                }
                 return new View(view.liveMemtables, view.flushingMemtables, sstableMap, view.compactingMap,
                                 SSTableIntervalTree.build(sstableMap.keySet()));
             }
@@ -352,5 +360,20 @@ public class View
                 return t.compareTo(lessThan) < 0;
             }
         };
+    }
+
+    private static int getSSTablesHash(Iterable<SSTableReader> readers) {
+        int hashSum = 0;
+        for (SSTableReader reader : readers) {
+            if (reader != null) {
+                hashSum += Objects.hashCode(reader.descriptor.hashCode(), reader.first, reader.last);
+            }
+        }
+        return hashSum;
+    }
+
+    private static boolean isRangesUnchanged(final Set<SSTableReader> remove, final Iterable<SSTableReader> add)
+    {
+        return getSSTablesHash(remove) == getSSTablesHash(add);
     }
 }

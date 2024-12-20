@@ -41,8 +41,14 @@ public class IntervalTree<C extends Comparable<? super C>, D, I extends Interval
     @SuppressWarnings("unchecked")
     private static final IntervalTree EMPTY_TREE = new IntervalTree(null);
 
-    private final IntervalNode head;
-    private final int count;
+    protected final IntervalNode head;
+    protected final int count;
+
+    protected IntervalTree(int count, IntervalNode head)
+    {
+        this.head = head;
+        this.count = count;
+    }
 
     protected IntervalTree(Collection<I> intervals)
     {
@@ -142,7 +148,7 @@ public class IntervalTree<C extends Comparable<? super C>, D, I extends Interval
         return result;
     }
 
-    private class IntervalNode
+    protected class IntervalNode
     {
         final C center;
         final C low;
@@ -217,6 +223,17 @@ public class IntervalTree<C extends Comparable<? super C>, D, I extends Interval
             }
         }
 
+        public IntervalNode(C center, C low, C high, List<I> intersectsLeft, List<I> intersectsRight, IntervalNode left, IntervalNode right)
+        {
+            this.center = center;
+            this.low = low;
+            this.high = high;
+            this.intersectsLeft = intersectsLeft;
+            this.intersectsRight = intersectsRight;
+            this.left = left;
+            this.right = right;
+        }
+
         void searchInternal(Interval<C, D> searchInterval, List<D> results)
         {
             if (center.compareTo(searchInterval.min) < 0)
@@ -255,6 +272,78 @@ public class IntervalTree<C extends Comparable<? super C>, D, I extends Interval
                 if (right != null)
                     right.searchInternal(searchInterval, results);
             }
+        }
+
+        public IntervalNode copyAndReplace(List<I> intervals)
+        {
+            return copyAndReplaceHelper(this, intervals);
+        }
+
+        public IntervalNode copyAndReplaceHelper(IntervalNode node, List<I> intervals)
+        {
+            if (node == null || intervals.isEmpty())
+                return node;
+
+            List<I> leftSegment = new ArrayList<>();
+            List<I> rightSegment = new ArrayList<>();
+            List<I> newIntersectsLeft = new ArrayList<>(node.intersectsLeft);
+            List<I> newIntersectsRight = new ArrayList<>(node.intersectsRight);
+            int updated = 0;
+
+            for (I interval : intervals)
+            {
+                if (node.center.compareTo(interval.min) < 0)
+                {
+                    rightSegment.add(interval);
+                }
+                else if (node.center.compareTo(interval.max) > 0)
+                {
+                    leftSegment.add(interval);
+                }
+                else
+                {
+                    // intersects in current node
+                    boolean leftUpdated = false;
+                    boolean rightUpdated = false;
+
+                    int i = Interval.<C, D>minOrdering().binarySearchAsymmetric(node.intersectsLeft, interval.min, Op.CEIL);
+                    while (i < node.intersectsLeft.size())
+                    {
+                        if (node.intersectsLeft.get(i).equals(interval))
+                        {
+                            newIntersectsLeft.set(i, interval);
+                            leftUpdated = true;
+                            break;
+                        }
+                        i++;
+                    }
+
+                    int j = Interval.<C, D>maxOrdering().binarySearchAsymmetric(node.intersectsRight, interval.max, Op.CEIL);
+                    while (j < node.intersectsRight.size())
+                    {
+                        if (node.intersectsRight.get(j).equals(interval))
+                        {
+                            newIntersectsRight.set(j, interval);
+                            rightUpdated = true;
+                            break;
+                        }
+                        j++;
+                    }
+                    assert leftUpdated && rightUpdated : "leftupdated = " + leftUpdated + ", rightupdated = " + rightUpdated;
+                    updated++;
+                }
+            }
+
+            assert leftSegment.size() + rightSegment.size() + updated == intervals.size() :
+            "leftSegment size (" + leftSegment.size() + ") + rightSegment size (" + rightSegment.size() +
+            ") + updated (" + updated + ") != intervals size (" + intervals.size() + ')';
+            return new IntervalNode(node.center,
+                                    node.low,
+                                    node.high,
+                                    updated > 0 ? newIntersectsLeft : node.intersectsLeft,
+                                    updated > 0 ? newIntersectsRight : node.intersectsRight,
+                                    copyAndReplaceHelper(node.left, leftSegment),
+                                    copyAndReplaceHelper(node.right, rightSegment));
         }
     }
 

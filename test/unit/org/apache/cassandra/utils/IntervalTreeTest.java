@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.google.common.base.Objects;
 import org.junit.Test;
 import org.apache.cassandra.io.ISerializer;
 import org.apache.cassandra.io.IVersionedSerializer;
@@ -36,6 +37,8 @@ import org.apache.cassandra.io.util.DataOutputBuffer;
 import org.apache.cassandra.io.util.DataOutputPlus;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotSame;
+import static org.junit.Assert.assertSame;
 
 public class IntervalTreeTest
 {
@@ -194,5 +197,84 @@ public class IntervalTreeTest
             intervals2.add(i);
 
         assertEquals(intervals, intervals2);
+    }
+
+    @Test
+    public void testCopyAndReplace()
+    {
+        class DummyObj
+        {
+            final String data;
+            public DummyObj(String d)
+            {
+                data = d;
+            }
+            @Override
+            public final boolean equals(Object o)
+            {
+                if(!(o instanceof DummyObj))
+                    return false;
+
+                DummyObj that = (DummyObj)o;
+                return Objects.equal(data, that.data);
+            }
+        }
+        List<Interval<Integer, DummyObj>> intervals = new ArrayList<>();
+
+        DummyObj data1 = new DummyObj("b");
+        DummyObj data2 = new DummyObj("i");
+        DummyObj newData1 = new DummyObj("b");
+        DummyObj newData2 = new DummyObj("i");
+
+        Interval<Integer, DummyObj> target1 = Interval.create(-3, -2, data1);
+        Interval<Integer, DummyObj> target2 = Interval.create(8, 9, data2);
+
+        // the two new intervals should replace the old ones in tree
+        Interval<Integer, DummyObj> newTarget1 = Interval.create(-3, -2, newData1);
+        Interval<Integer, DummyObj> newTarget2 = Interval.create(8, 9, newData2);
+
+        intervals.add(Interval.create(-300, -200, new DummyObj("a")));
+        intervals.add(target1);
+        intervals.add(Interval.create(1, 2, new DummyObj("c")));
+        intervals.add(Interval.create(1, 3, new DummyObj("d")));
+        intervals.add(Interval.create(2, 4, new DummyObj("e")));
+        intervals.add(Interval.create(3, 6, new DummyObj("f")));
+        intervals.add(Interval.create(4, 6, new DummyObj("g")));
+        intervals.add(Interval.create(5, 7, new DummyObj("h")));
+        intervals.add(target2);
+        intervals.add(Interval.create(15, 20, new DummyObj("j")));
+        intervals.add(Interval.create(40, 50, new DummyObj("k")));
+        intervals.add(Interval.create(49, 60, new DummyObj("l")));
+
+        IntervalTree<Integer, DummyObj, Interval<Integer, DummyObj>> it = IntervalTree.build(intervals);
+        assertEquals(3, it.search(Interval.create(4, 4)).size());
+        assertEquals(4, it.search(Interval.create(4, 5)).size());
+        assertEquals(7, it.search(Interval.create(-1, 10)).size());
+        assertEquals(0, it.search(Interval.create(-1, -1)).size());
+        assertEquals(5, it.search(Interval.create(1, 4)).size());
+        assertEquals(2, it.search(Interval.create(0, 1)).size());
+        assertEquals(0, it.search(Interval.create(10, 12)).size());
+        List<DummyObj> intersection1 = it.search(Interval.create(-3, -2));
+        assertSame(intersection1.get(0), data1);
+        List<DummyObj> intersection2 = it.search(Interval.create(8, 9));
+        assertSame(intersection2.get(0), data2);
+
+        List<Interval<Integer, DummyObj>> toUpdate = new ArrayList<>();
+        toUpdate.add(newTarget1);
+        toUpdate.add(newTarget2);
+        it = new IntervalTree<>(it.count, it.head.copyAndReplace(toUpdate));
+        assertEquals(3, it.search(Interval.create(4, 4)).size());
+        assertEquals(4, it.search(Interval.create(4, 5)).size());
+        assertEquals(7, it.search(Interval.create(-1, 10)).size());
+        assertEquals(0, it.search(Interval.create(-1, -1)).size());
+        assertEquals(5, it.search(Interval.create(1, 4)).size());
+        assertEquals(2, it.search(Interval.create(0, 1)).size());
+        assertEquals(0, it.search(Interval.create(10, 12)).size());
+        intersection1 = it.search(Interval.create(-3, -2));
+        assertNotSame(intersection1.get(0), data1);
+        assertSame(intersection1.get(0), newData1);
+        intersection2 = it.search(Interval.create(8, 9));
+        assertNotSame(intersection1.get(0), data2);
+        assertSame(intersection2.get(0), newData2);
     }
 }
