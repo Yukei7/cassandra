@@ -41,8 +41,14 @@ public class IntervalTree<C extends Comparable<? super C>, D, I extends Interval
     @SuppressWarnings("unchecked")
     private static final IntervalTree EMPTY_TREE = new IntervalTree(null);
 
-    private final IntervalNode head;
-    private final int count;
+    protected final IntervalNode head;
+    protected final int count;
+
+    protected IntervalTree(int count, IntervalNode head)
+    {
+        this.head = head;
+        this.count = count;
+    }
 
     protected IntervalTree(Collection<I> intervals)
     {
@@ -142,7 +148,7 @@ public class IntervalTree<C extends Comparable<? super C>, D, I extends Interval
         return result;
     }
 
-    private class IntervalNode
+    protected class IntervalNode
     {
         final C center;
         final C low;
@@ -217,6 +223,17 @@ public class IntervalTree<C extends Comparable<? super C>, D, I extends Interval
             }
         }
 
+        public IntervalNode(C center, C low, C high, List<I> intersectsLeft, List<I> intersectsRight, IntervalNode left, IntervalNode right)
+        {
+            this.center = center;
+            this.low = low;
+            this.high = high;
+            this.intersectsLeft = intersectsLeft;
+            this.intersectsRight = intersectsRight;
+            this.left = left;
+            this.right = right;
+        }
+
         void searchInternal(Interval<C, D> searchInterval, List<D> results)
         {
             if (center.compareTo(searchInterval.min) < 0)
@@ -255,6 +272,54 @@ public class IntervalTree<C extends Comparable<? super C>, D, I extends Interval
                 if (right != null)
                     right.searchInternal(searchInterval, results);
             }
+        }
+
+        public IntervalNode copyAndAddIntervals(List<I> intervals)
+        {
+            return copyAndAddIntervalsHelper(this, intervals);
+        }
+
+        private IntervalNode copyAndAddIntervalsHelper(IntervalNode root, List<I> intervals)
+        {
+            if (intervals.isEmpty())
+                return root;
+            if (root == null)
+                return new IntervalNode(intervals);
+
+            List<I> leftSegment = new ArrayList<>();
+            List<I> rightSegment = new ArrayList<>();
+            C newLow = root.low;
+            C newHigh = root.high;
+            List<I> newIntersectsLeft = new ArrayList<>(root.intersectsLeft);
+            List<I> newIntersectsRight = new ArrayList<>(root.intersectsRight);
+            for (I i : intervals)
+            {
+                newLow = newLow.compareTo(i.min) < 0 ? newLow : i.min;
+                newHigh = newHigh.compareTo(i.max) > 0 ? newHigh : i.max;
+                if (i.max.compareTo(root.center) < 0)
+                {
+                    leftSegment.add(i);
+                }
+                else if (i.min.compareTo(root.center) > 0)
+                {
+                    rightSegment.add(i);
+                }
+                else
+                {
+                    int leftIdx = Interval.<C, D>minOrdering().binarySearchAsymmetric(newIntersectsLeft, i.min, Op.CEIL);
+                    newIntersectsLeft.add(leftIdx, i);
+
+                    int rightIdx = Interval.<C, D>maxOrdering().binarySearchAsymmetric(newIntersectsRight, i.max, Op.HIGHER);
+                    newIntersectsRight.add(rightIdx, i);
+                }
+            }
+            return new IntervalNode(root.center,
+                                    newLow,
+                                    newHigh,
+                                    newIntersectsLeft,
+                                    newIntersectsRight,
+                                    copyAndAddIntervalsHelper(root.left, leftSegment),
+                                    copyAndAddIntervalsHelper(root.right, rightSegment));
         }
     }
 

@@ -195,4 +195,38 @@ public class IntervalTreeTest
 
         assertEquals(intervals, intervals2);
     }
+
+    @Test
+    public void testCopyAndAddIntervals()
+    {
+        List<Interval<Integer, Void>> intervals = new ArrayList<Interval<Integer, Void>>();
+
+        intervals.add(Interval.<Integer, Void>create(-300, -200));
+        intervals.add(Interval.<Integer, Void>create(-3, -2));
+        intervals.add(Interval.<Integer, Void>create(1, 2));
+        intervals.add(Interval.<Integer, Void>create(3, 6));
+        intervals.add(Interval.<Integer, Void>create(2, 4));
+        intervals.add(Interval.<Integer, Void>create(5, 7));
+        intervals.add(Interval.<Integer, Void>create(4, 6));
+        intervals.add(Interval.<Integer, Void>create(15, 20));
+        intervals.add(Interval.<Integer, Void>create(49, 60));
+
+
+        IntervalTree<Integer, Void, Interval<Integer, Void>> it = IntervalTree.build(intervals);
+
+        List<Interval<Integer, Void>> intervalsToAdd = new ArrayList<>();
+        intervalsToAdd.add(Interval.create(1, 3));
+        intervalsToAdd.add(Interval.create(8, 9));
+        intervalsToAdd.add(Interval.create(40, 50));
+
+        it = new IntervalTree<>(it.count, it.head.copyAndAddIntervals(intervalsToAdd));
+
+        assertEquals(3, it.search(Interval.<Integer, Void>create(4, 4)).size());
+        assertEquals(4, it.search(Interval.<Integer, Void>create(4, 5)).size());
+        assertEquals(7, it.search(Interval.<Integer, Void>create(-1, 10)).size());
+        assertEquals(0, it.search(Interval.<Integer, Void>create(-1, -1)).size());
+        assertEquals(5, it.search(Interval.<Integer, Void>create(1, 4)).size());
+        assertEquals(2, it.search(Interval.<Integer, Void>create(0, 1)).size());
+        assertEquals(0, it.search(Interval.<Integer, Void>create(10, 12)).size());
+    }
 }

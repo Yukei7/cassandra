@@ -40,6 +40,11 @@ public class SSTableIntervalTree extends IntervalTree<PartitionPosition, SSTable
         super(intervals);
     }
 
+    SSTableIntervalTree(int count, IntervalNode head)
+    {
+        super(count, head);
+    }
+
     public static SSTableIntervalTree empty()
     {
         return EMPTY;
@@ -48,6 +53,14 @@ public class SSTableIntervalTree extends IntervalTree<PartitionPosition, SSTable
     public static SSTableIntervalTree build(Iterable<SSTableReader> sstables)
     {
         return new SSTableIntervalTree(buildIntervals(sstables));
+    }
+
+    public static SSTableIntervalTree addSSTables(SSTableIntervalTree tree, Iterable<SSTableReader> sstables)
+    {
+        List<Interval<PartitionPosition, SSTableReader>> intervals = buildIntervals(sstables);
+        SSTableIntervalTree newTree = new SSTableIntervalTree(tree.count + intervals.size(),
+                                                              tree.head.copyAndAddIntervals(intervals));
+        return newTree;
     }
 
     public static List<Interval<PartitionPosition, SSTableReader>> buildIntervals(Iterable<SSTableReader> sstables)

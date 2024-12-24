@@ -336,9 +336,18 @@ public class View
                     return new View(view.liveMemtables, flushingMemtables, view.sstablesMap,
                                     view.compactingMap, view.intervalTree);
 
+                // here we're adding sstables only
                 Map<SSTableReader, SSTableReader> sstableMap = replace(view.sstablesMap, emptySet(), flushed);
-                return new View(view.liveMemtables, flushingMemtables, sstableMap, view.compactingMap,
-                                SSTableIntervalTree.build(sstableMap.keySet()));
+                if (!view.intervalTree.isEmpty())
+                {
+                    return new View(view.liveMemtables, flushingMemtables, sstableMap, view.compactingMap,
+                                    SSTableIntervalTree.addSSTables(view.intervalTree, flushed));
+                }
+                else
+                {
+                    return new View(view.liveMemtables, flushingMemtables, sstableMap, view.compactingMap,
+                                    SSTableIntervalTree.build(sstableMap.keySet()));
+                }
             }
         };
     }
