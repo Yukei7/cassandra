@@ -5523,4 +5523,14 @@ public class DatabaseDescriptor
     {
         return conf.password_validator_reconfiguration_enabled;
     }
+
+    public static boolean getUseNewBehaviorForIntervalTreeBuild()
+    {
+        return conf.use_new_behavior_for_interval_tree_build;
+    }
+
+    public static void setUseNewBehaviorForIntervalTreeBuild(boolean isEnabled)
+    {
+        conf.use_new_behavior_for_interval_tree_build = isEnabled;
+    }
 }

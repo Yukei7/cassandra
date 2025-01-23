@@ -743,6 +743,9 @@ public class Config
      */
     public volatile boolean snapshot_on_repaired_data_mismatch = false;
 
+    // set this to be true to use new behavior for interval tree build (CASSANDRA-19596)
+    public boolean use_new_behavior_for_interval_tree_build = false;
+
     /**
      * Number of seconds to set nowInSec into the future when performing validation previews against repaired data
      * this (attempts) to prevent a race where validations on different machines are started on different sides of
