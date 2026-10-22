@@ -1574,6 +1574,15 @@ public abstract class SSTableReader extends SSTable implements UnfilteredSource,
     public abstract boolean mayContainAssumingKeyIsInRange(DecoratedKey key);
 
     /**
+     * Checks whether the Bloom filter allows skipping this SSTable for the provided key. Implementations without an
+     * informative Bloom filter must return {@code true}.
+     */
+    public boolean mayContainUsingBloomFilter(DecoratedKey key, SSTableReadsListener listener)
+    {
+        return true;
+    }
+
+    /**
      * One instance per SSTableReader we create.
      * <p>
      * We can create many InstanceTidiers (one for every time we reopen an sstable with MOVED_START for example),

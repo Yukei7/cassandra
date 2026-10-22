@@ -33,6 +33,7 @@ import org.apache.cassandra.db.ClusteringBound;
 import org.apache.cassandra.db.ColumnFamilyStore;
 import org.apache.cassandra.db.DecoratedKey;
 import org.apache.cassandra.db.Keyspace;
+import org.apache.cassandra.db.ReadExecutionController;
 import org.apache.cassandra.db.SinglePartitionReadCommand;
 import org.apache.cassandra.db.Slice;
 import org.apache.cassandra.db.Slices;
@@ -48,6 +49,7 @@ import org.apache.cassandra.db.marshal.UTF8Type;
 import org.apache.cassandra.exceptions.ConfigurationException;
 import org.apache.cassandra.io.sstable.SSTableReadsListener;
 import org.apache.cassandra.io.sstable.format.SSTableReader;
+import org.apache.cassandra.io.sstable.format.SSTableReaderWithFilter;
 import org.apache.cassandra.schema.KeyspaceParams;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.utils.ByteBufferUtil;
@@ -221,6 +223,48 @@ public class UnfilteredRowIteratorWithLowerBoundTest
         Slice slice4 = Slice.make(ClusteringBound.BOTTOM, Util.clustering(metadata.comparator, 0, 0).asEndBound());
         assertTrue(lowerBoundApplicable(metadata, key, slice4, sstable, false));
         assertFalse(lowerBoundApplicable(metadata, key, slice4, sstable, true));
+    }
+
+    @Test
+    public void testBloomFilterCheckedBeforeLowerBoundIteratorIsCreated()
+    {
+        ColumnFamilyStore cfs = Keyspace.open(KEYSPACE).getColumnFamilyStore(TABLE);
+        cfs.disableAutoCompaction();
+        for (int i = 0; i < 256; i++)
+        {
+            QueryProcessor.executeInternal(String.format("INSERT INTO %s.%s (k, i, v) VALUES ('key%04d', 0, 'value')",
+                                                         KEYSPACE, TABLE, i * 2));
+        }
+        cfs.forceBlockingFlush(ColumnFamilyStore.FlushReason.UNIT_TESTS);
+
+        SSTableReader sstable = cfs.getLiveSSTables().iterator().next();
+        SSTableReaderWithFilter reader = (SSTableReaderWithFilter) sstable;
+        SinglePartitionReadCommand command = findBloomFilterMissWithinSSTableRange(cfs, sstable);
+        long trueNegatives = reader.getFilterTracker().getTrueNegativeCount();
+
+        try (ReadExecutionController controller = command.executionController();
+             UnfilteredRowIterator ignored = command.queryMemtableAndDisk(cfs, controller))
+        {
+            // Do not consume the iterator: the Bloom filter must have been checked before the lazy lower-bound
+            // iterator could be initialized.
+            assertEquals(trueNegatives + 1, reader.getFilterTracker().getTrueNegativeCount());
+        }
+    }
+
+    private SinglePartitionReadCommand findBloomFilterMissWithinSSTableRange(ColumnFamilyStore cfs,
+                                                                             SSTableReader sstable)
+    {
+        for (int i = 0; i < 255; i++)
+        {
+            SinglePartitionReadCommand command =
+            (SinglePartitionReadCommand) Util.cmd(cfs, String.format("key%04d", i * 2 + 1)).build();
+            DecoratedKey key = command.partitionKey();
+            if (cfs.select(View.select(SSTableSet.LIVE, key)).sstables.contains(sstable)
+                && !sstable.mayContainAssumingKeyIsInRange(key))
+                return command;
+        }
+
+        throw new AssertionError("Unable to find a Bloom filter miss within the SSTable key range");
     }
 
     private SSTableReader createSSTable(TableMetadata metadata, String keyspace, String table, String query)

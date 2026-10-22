@@ -836,6 +836,11 @@ public class SinglePartitionReadCommand extends ReadCommand implements SinglePar
                     break;
                 }
 
+                // Avoid constructing a lower-bound iterator and adding its synthetic bound to the merge when the
+                // Bloom filter can already prove that this partition is absent.
+                if (!sstable.mayContainUsingBloomFilter(partitionKey(), metricsCollector))
+                    continue;
+
                 boolean intersects = intersects(sstable);
                 boolean hasRequiredStatics = hasRequiredStatics(sstable);
                 boolean hasPartitionLevelDeletions = hasPartitionLevelDeletions(sstable);
